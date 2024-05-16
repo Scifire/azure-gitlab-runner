@@ -1,0 +1,42 @@
+concurrent = 10
+listen_address = ":9252"
+
+[[runners]]
+  name = "Azure instance autoscaler"
+  url = "https://gitlab.com"
+  token = "<GITLAB TOKEN>"
+  shell = "sh"
+
+  executor = "docker-autoscaler"
+
+  [runners.docker]
+    image = "alpine:latest"
+    privileged = true # Needed for docker in docker
+    host = "unix:///var/run/docker.sock" # Needed for docker in docker
+    tls_verify = false # Needed for docker in docker
+    volumes = ["/certs"] # Needed for docker in docker
+
+
+  # Autoscaler config
+  [runners.autoscaler]
+    plugin = "fleeting-plugin-azure"
+
+    capacity_per_instance = 1
+    max_use_count = 1
+    max_instances = 10
+
+    [runners.autoscaler.plugin_config] # plugin specific configuration (see plugin documentation)
+      name                = "vmss-prod-gitlab-runner-<name-suffix>" # Azure scale set name
+      subscription_id     = "<Azure-subscription-id>"
+      resource_group_name = "rg-prod-gitlab-runner"
+
+    [runners.autoscaler.connector_config]
+      username               = "runner"
+      password               = "<securepassword>"
+      use_static_credentials = true
+      timeout                = "10m"
+      use_external_addr      = false
+
+    [[runners.autoscaler.policy]]
+      idle_count = 0
+      idle_time  = "10m0s"
